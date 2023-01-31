@@ -1,0 +1,201 @@
+<html>
+  <head>
+    <meta http-equiv="pragma" content="no-cache" />
+
+    <script src="ConnectWiseHostedAPI.1.0.js"></script>
+
+    <script language="javascript">
+      var connectWiseClientApi;
+      var dirty = false;
+
+      document.addEventListener('DOMContentLoaded', function (event) {
+        onReady();
+      });
+
+      function onReady() {
+        connectWiseClientApi = new ConnectWiseHostedAPI(
+          'https://api-staging.connectwisedev.com/',
+          {
+            eventHandlers: [
+              { event: 'onLoad', callback: onLoadCallback },
+              { event: 'beforeSave', callback: beforeSaveCallback }
+            ]
+          },
+          true
+        );
+        console.log(connectWiseClientApi);
+
+        var required = document.getElementById('required');
+        var number = document.getElementById('number');
+
+        required.oninput = setDirty;
+        number.oninput = setDirty;
+
+        document.getElementById('btnMemberAuthentication').onclick =
+          function () {
+            connectWiseClientApi?.post(
+              { request: 'getMemberAuthentication' },
+              function (data) {
+                console.log(data);
+                document.getElementById('lblMemberAuthentication').innerText =
+                  data.site +
+                  ' ' +
+                  data.companyid +
+                  ' ' +
+                  data.memberid +
+                  ' ' +
+                  data.memberHash +
+                  ' ' +
+                  data.memberEmail;
+              }
+            );
+          };
+
+        document.getElementById('btnRefreshScreen').onclick = function () {
+          console.log(connectWiseClientApi);
+          connectWiseClientApi.post({ request: 'refreshScreen' });
+        };
+
+        document.getElementById('btnOpen').onclick = function () {
+          openScreen();
+        };
+      }
+
+      function openScreen() {
+        var newTab =
+          document.getElementById('lstTab').options[
+            document.getElementById('lstTab').selectedIndex
+          ].innerHTML === 'new';
+        var screenID =
+          document.getElementById('lstScreen').options[
+            document.getElementById('lstScreen').selectedIndex
+          ].innerHTML;
+        var id = document.getElementById('txtOpenID').value;
+
+        connectWiseClientApi.post({
+          request: 'openScreen',
+          args: { newTab: newTab, screen: screenID, id: id }
+        });
+      }
+
+      function onLoadCallback(data) {
+        console.log(data);
+        showMsg(
+          data.screenObject.screen +
+            ' loaded! Hosted as: ' +
+            data.screenObject.hostedAs
+        );
+        setField('recid', data.screenObject.id);
+      }
+
+      function setField(fieldID, value) {
+        var field = document.getElementById(fieldID);
+        field.value = value;
+      }
+
+      function beforeSaveCallback(data) {
+        var required = document.getElementById('required');
+        var number = document.getElementById('number');
+
+        var errors = [];
+
+        if (required.value == null || required.value == '') {
+          required.className = 'error';
+          errors.push('Example required field is empty!');
+        } else {
+          required.className = '';
+        }
+
+        if (number.value != null && number.value != '' && isNaN(number.value)) {
+          number.className = 'error';
+          errors.push('Example number field must be a number!');
+        } else {
+          number.className = '';
+        }
+
+        if (errors.length > 0) {
+          data.onFailure(errors);
+        } else {
+          dirty = false;
+          data.onSuccess();
+        }
+      }
+
+      function setDirty() {
+        if (dirty) {
+          return;
+        }
+
+        dirty = true;
+        connectWiseClientApi.post(
+          {
+            request: 'setDirty',
+            args: { dirty: dirty }
+          },
+          function (data) {
+            console.log('sasdas', data);
+          }
+        );
+      }
+
+      function showMsg(msg) {
+        var lbl = document.getElementById('msg');
+        lbl.innerText = msg;
+      }
+    </script>
+
+    <style>
+      .error {
+        border: 1px solid #ff0000;
+        background-color: #ffeeee;
+      }
+      div {
+        padding: 1px;
+      }
+    </style>
+  </head>
+  <body>
+    <form>
+      <div id="msg" style="color: green; margin-bottom: 5px">&nbsp;</div>
+      <div style="margin-bottom: 5px">
+        <label style="width: 100px; display: inline-block" for="recid"
+          >ID:</label
+        >
+        <input type="text" id="recid" readonly="true" />
+      </div>
+      <div style="margin-bottom: 5px">
+        <label style="width: 100px; display: inline-block" for="required"
+          >Required *:</label
+        >
+        <input type="text" id="required" />
+      </div>
+      <div>
+        <label style="width: 100px; display: inline-block" for="number"
+          >Number:</label
+        >
+        <input type="text" id="number" />
+      </div>
+      <div>
+        <button type="button" id="btnRefreshScreen">Request Refresh</button>
+      </div>
+      <div>
+        <button type="button" id="btnMemberAuthentication">
+          Request Member Authentication
+        </button>
+        <span id="lblMemberAuthentication" />
+      </div>
+      <div>
+        Open
+        <select id="lstScreen">
+          <option>ticket</option>
+          <option>company</option></select
+        ><input id="txtOpenID" type="text" /> in
+        <select id="lstTab">
+          <option>new</option>
+          <option>same</option>
+        </select>
+        tab.<button type="button" id="btnOpen">GO</button>
+      </div>
+    </form>
+  </body>
+</html>
